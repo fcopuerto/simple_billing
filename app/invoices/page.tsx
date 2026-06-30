@@ -14,8 +14,9 @@ import {
 } from '@/lib/utils'
 import type { Quarter } from '@/lib/utils'
 
+const supabase = createClient()
+
 export default function InvoicesPage() {
-  const supabase = createClient()
   const [clients, setClients] = useState<Client[]>([])
   const [selectedClientId, setSelectedClientId] = useState<string>('')
   const [entries, setEntries] = useState<WorkEntry[]>([])
@@ -29,6 +30,8 @@ export default function InvoicesPage() {
 
   const selectedQuarter = availableQuarters[selectedQuarterIdx]
   const { start, end } = quarterDateRange(selectedQuarter)
+  const startStr = start.toISOString().slice(0, 10)
+  const endStr = end.toISOString().slice(0, 10)
 
   const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null
 
@@ -45,7 +48,7 @@ export default function InvoicesPage() {
       }
     }
     setClientsLoading(false)
-  }, [supabase]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   const fetchEntries = useCallback(async () => {
     if (!selectedClientId) return
@@ -55,8 +58,8 @@ export default function InvoicesPage() {
       .from('work_entries')
       .select('*')
       .eq('client_id', selectedClientId)
-      .gte('date', start.toISOString().slice(0, 10))
-      .lte('date', end.toISOString().slice(0, 10))
+      .gte('date', startStr)
+      .lte('date', endStr)
       .order('date', { ascending: true })
 
     if (err) {
@@ -65,7 +68,7 @@ export default function InvoicesPage() {
       setEntries(data ?? [])
     }
     setLoading(false)
-  }, [supabase, selectedClientId, start, end])
+  }, [selectedClientId, startStr, endStr])
 
   useEffect(() => {
     fetchClients()
