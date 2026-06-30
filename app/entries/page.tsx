@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+
+const supabase = createClient()
 import EntryForm from '@/components/entry-form'
 import type { Client, WorkEntry, WorkEntryWithClient } from '@/lib/types'
 import {
@@ -15,7 +17,6 @@ import {
 } from '@/lib/utils'
 
 export default function EntriesPage() {
-  const supabase = createClient()
   const [clients, setClients] = useState<Client[]>([])
   const [entries, setEntries] = useState<WorkEntryWithClient[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,19 +32,21 @@ export default function EntriesPage() {
 
   const filterQuarter = availableQuarters[filterQuarterIdx]
   const { start, end } = quarterDateRange(filterQuarter)
+  const startStr = start.toISOString().slice(0, 10)
+  const endStr = end.toISOString().slice(0, 10)
 
   const fetchClients = useCallback(async () => {
     const { data } = await supabase.from('clients').select('*').order('name')
     setClients(data ?? [])
-  }, [supabase])
+  }, [])
 
   const fetchEntries = useCallback(async () => {
     setLoading(true)
     let query = supabase
       .from('work_entries')
       .select('*, clients(name, hourly_rate)')
-      .gte('date', start.toISOString().slice(0, 10))
-      .lte('date', end.toISOString().slice(0, 10))
+      .gte('date', startStr)
+      .lte('date', endStr)
       .order('date', { ascending: false })
 
     if (filterClientId !== 'all') {
@@ -57,7 +60,7 @@ export default function EntriesPage() {
       setEntries((data ?? []) as WorkEntryWithClient[])
     }
     setLoading(false)
-  }, [supabase, start, end, filterClientId])
+  }, [startStr, endStr, filterClientId])
 
   useEffect(() => {
     fetchClients()
