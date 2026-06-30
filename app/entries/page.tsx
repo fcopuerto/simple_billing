@@ -30,10 +30,10 @@ export default function EntriesPage() {
   const availableQuarters = getAvailableQuarters()
   const [filterQuarterIdx, setFilterQuarterIdx] = useState<number>(0) // 0 = current
 
-  const filterQuarter = availableQuarters[filterQuarterIdx]
-  const { start, end } = quarterDateRange(filterQuarter)
-  const startStr = start.toISOString().slice(0, 10)
-  const endStr = end.toISOString().slice(0, 10)
+  const filterQuarter = filterQuarterIdx >= 0 ? availableQuarters[filterQuarterIdx] : null
+  const dateRange = filterQuarter ? quarterDateRange(filterQuarter) : null
+  const startStr = dateRange?.start.toISOString().slice(0, 10) ?? null
+  const endStr = dateRange?.end.toISOString().slice(0, 10) ?? null
 
   const fetchClients = useCallback(async () => {
     const { data } = await supabase.from('clients').select('*').order('name')
@@ -45,9 +45,11 @@ export default function EntriesPage() {
     let query = supabase
       .from('work_entries')
       .select('*, clients(name, hourly_rate)')
-      .gte('date', startStr)
-      .lte('date', endStr)
       .order('date', { ascending: false })
+
+    if (startStr && endStr) {
+      query = query.gte('date', startStr).lte('date', endStr)
+    }
 
     if (filterClientId !== 'all') {
       query = query.eq('client_id', filterClientId)
@@ -100,7 +102,9 @@ export default function EntriesPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Registros de trabajo</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {quarterLabel(filterQuarter)}: {formatDate(start)} — {formatDate(end)}
+            {filterQuarter
+              ? `${quarterLabel(filterQuarter)}: ${formatDate(dateRange!.start)} — ${formatDate(dateRange!.end)}`
+              : 'Todos los períodos'}
           </p>
         </div>
         {!showForm && !editingEntry && (
@@ -147,6 +151,7 @@ export default function EntriesPage() {
             onChange={(e) => setFilterQuarterIdx(Number(e.target.value))}
             className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           >
+            <option value={-1}>Todos los períodos</option>
             {availableQuarters.map((q, i) => (
               <option key={i} value={i}>
                 {quarterLabel(q)}
